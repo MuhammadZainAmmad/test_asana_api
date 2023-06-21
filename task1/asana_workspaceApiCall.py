@@ -2,17 +2,12 @@ import requests
 import json           
 import pandas as pd 
 
-
-# url = "https://app.asana.com/api/1.0/projects"
-# url = "https://app.asana.com/api/1.0/tasks"
-
 def asanaResToCSV(csvName, res):
     '''
         csvName: name of csv file in which data to dump
         res: response of the asana api
     '''
     resDict = json.loads(res.text) # String to dict
-    print(resDict)
     df = pd.DataFrame.from_dict(resDict['data'])
     df.to_csv(csvName + '.csv')
 
@@ -23,10 +18,25 @@ headers = {
 
 workspace = "https://app.asana.com/api/1.0/workspaces"
 resWorkspace = requests.get(workspace, headers=headers)
-# print(type(resWorkspace.text)) # type ==> 'dict' 
+print(resWorkspace.text) # type ==> 'dict' 
 asanaResToCSV('workspace', resWorkspace)
 
+projects = "https://app.asana.com/api/1.0/projects"
+resProjects = requests.get(projects, headers=headers)
+print((resProjects.text)) # type ==> 'dict' 
+asanaResToCSV('projects', resProjects)
 
-# projects = "https://app.asana.com/api/1.0/projects"
-# resProjects = requests.get(workspace, headers=headers)
-# print((resProjects.text)) # type ==> 'dict' 
+# Getting the project ID
+resProjectsDict = json.loads(resProjects.text)
+projectID = resProjectsDict['data'][0]['gid']
+# print(projectID)
+
+section = f'https://app.asana.com/api/1.0/projects/{projectID}/sections'
+resSection = requests.get(section, headers=headers)
+print((resSection.text)) # type ==> 'dict' 
+asanaResToCSV('section', resSection)
+
+tasks = f"https://app.asana.com/api/1.0/tasks?project={projectID}"
+resTasks = requests.get(tasks, headers=headers)
+print((resTasks.text)) # type ==> 'dict' 
+asanaResToCSV('tasks', resTasks)
