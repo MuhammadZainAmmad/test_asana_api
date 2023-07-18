@@ -1,6 +1,7 @@
 import requests
 import json           
 import pandas as pd 
+import os
 
 def asanaResToCSV(csvName, res):
     '''
@@ -9,7 +10,9 @@ def asanaResToCSV(csvName, res):
     '''
     resDict = json.loads(res.text) # String to dict
     df = pd.DataFrame.from_dict(resDict['data'])
-    df.to_csv(csvName + '.csv')
+    if not os.path.exists('./fetchedRecords'):
+        os.makedirs('./fetchedRecords')
+    df.to_csv(f'./fetchedRecords/{csvName}.csv')
 
 headers = {
     "accept": "application/json",
@@ -46,27 +49,29 @@ asanaResToCSV('tasks', resTasks)
 
 
 
-# resTasksDict = json.loads(resTasks.text)
-# tasksList = resTasksDict['data']
-# # print(tasksList)
+resTasksDict = json.loads(resTasks.text)
+tasksList = resTasksDict['data']
+# print(tasksList)
 
-# def taskDetailsToCSV(name, id):
-#     task = f"https://app.asana.com/api/1.0/tasks/{id}"
-#     resTask = requests.get(task, headers=headers)
-#     # print((resTask.text)) # type ==> 'dict' 
-#     resDict = json.loads(resTask.text) # String to dict
-#     df = pd.json_normalize(resDict['data'], max_level=1)
-#     df.to_csv(name + '.csv')
+def taskDetailsToCSV(name, id):
+    task = f"https://app.asana.com/api/1.0/tasks/{id}"
+    resTask = requests.get(task, headers=headers)
+    # print((resTask.text)) # type ==> 'dict' 
+    resDict = json.loads(resTask.text) # String to dict
+    df = pd.json_normalize(resDict['data'], max_level=1)
+    if not os.path.exists('./fetchedRecords/taskDetails'):
+        os.makedirs('./fetchedRecords/taskDetails')
+    df.to_csv(f'./fetchedRecords/taskDetails/{name}.csv')
 
-# # Checking the id of each task in the multiple tasks response by asana
-# count = 0
-# for task in tasksList:
-#     # print(task['gid'])
-#     taskDetailsToCSV(f'task{count}', task['gid'])
-#     count += 1
+# Checking the id of each task in the multiple tasks response by asana
+count = 0
+for task in tasksList:
+    # print(task['gid'])
+    taskDetailsToCSV(f'task{count}', task['gid'])
+    count += 1
 
 # Understanding the task response
-# resTaskDict = json.loads(resTask.text)
+# resTaskDict = json.loads(resTasks.text)
 # for item in resTaskDict['data'].keys():
 #     print(item)
 #     print(resTaskDict['data'][item], end='\n\n')
