@@ -42,53 +42,57 @@ projectID = resProjectsDict['data'][0]['gid']
 # # print((resSection.text)) # type ==> 'dict' 
 # asanaResToCSV('section', resSection)
 
+# ========================================= fetching tasks ===========================================
+
 # tasks = f"https://app.asana.com/api/1.0/tasks?project={projectID}"
 # resTasks = requests.get(tasks, headers=headers)
 # # print((resTasks.text)) # type ==> 'dict' 
 # asanaResToCSV('tasks', resTasks)
 
+current_datetime = datetime.utcnow().isoformat()
+encoded_datetime = urllib.parse.quote(current_datetime)
 if not os.path.exists('./fetchedRecords/tasks.csv'): # Logic for the first run of etl
     tasks = f"https://app.asana.com/api/1.0/tasks?project={projectID}"
-    resTasks = requests.get(tasks, headers=headers)
-    # print((resTasks.text)) # type ==> 'dict'   
+    resTasks = requests.get(tasks, headers=headers) 
     resDict = json.loads(resTasks.text) # String to dict
-    
     df = pd.DataFrame.from_dict(resDict['data'])
     
-    current_datetime = datetime.utcnow().isoformat()
-    encoded_datetime = urllib.parse.quote(current_datetime)
+    # Adding date_created and date_modified columns in fetched df
     df['date_created'] = encoded_datetime
     df['date_modified'] = encoded_datetime
-    print(current_datetime)
     
     if not os.path.exists('./fetchedRecords'):
-        os.makedirs('./fetchedRecords')
-        
+        os.makedirs('./fetchedRecords')    
     df.to_csv(f'./fetchedRecords/tasks.csv', index=False)
     print('file created')
 else:
-    print('file exists')
+    # using previous etl result
     df_tasks = pd.read_csv('./fetchedRecords/tasks.csv')
-    print(df_tasks)
+    print(f'Previous df\n{df_tasks}\n')
     
     last_modified = df_tasks['date_modified'].max()
     
     tasks = f"https://app.asana.com/api/1.0/tasks?project={projectID}&modified_since={last_modified}"
-    resTasks = requests.get(tasks, headers=headers)
-    # print((resTasks.text)) # type ==> 'dict'   
+    resTasks = requests.get(tasks, headers=headers) 
     resDict = json.loads(resTasks.text) # String to dict
+    df_modifiedTasks = pd.DataFrame.from_dict(resDict['data'])
+    print(f'fetched df\n{df_modifiedTasks}\n')
+      
+    df_tasks['gid'] = df_tasks['gid'].astype(str)
     
-    df = pd.DataFrame.from_dict(resDict['data'])
+    # Adding date_created and date_modified columns in fetched df
+    df_modifiedTasks['date_modified'] = encoded_datetime
+    df_modifiedTasks = df_modifiedTasks.merge(df_tasks[['gid', 'date_created']], on='gid', how='left')
+    df_modifiedTasks['date_created'].fillna(encoded_datetime, inplace=True)
+    print(f'processed fetched df\n{df_modifiedTasks}\n')
     
-    current_datetime = datetime.utcnow().isoformat()
-    encoded_datetime = urllib.parse.quote(current_datetime)
-    df['date_created'] = encoded_datetime
-    df['date_modified'] = encoded_datetime
+    # merging the two dfs
+    df_merged = pd.concat([df_tasks, df_modifiedTasks]).drop_duplicates(subset='gid', keep='last')
+    print(f'final df\n{df_merged}\n')
     
     if not os.path.exists('./fetchedRecords'):
-        os.makedirs('./fetchedRecords')
-        
-    df.to_csv(f'./fetchedRecords/tasks_modified.csv', index=False)
+        os.makedirs('./fetchedRecords')        
+    df_merged.to_csv(f'./fetchedRecords/tasks_modified.csv', index=False)
     print('modified file created')
 
 # resTasksDict = json.loads(resTasks.text)
