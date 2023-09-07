@@ -2,8 +2,11 @@
 import asana
 import pandas as pd
 
-PERSONAL_ACCESS_TOKEN = '1/1204862582358995:58225b495568b45ac37d588db2fea9a6'
-client = asana.Client.access_token(PERSONAL_ACCESS_TOKEN)
+f = open('token.txt', 'r')
+token = f.readline()
+f.close()
+
+client = asana.Client.access_token(token)
 
 workspaces = client.workspaces.get_workspaces({'param': 'value', 'param': 'value'}, opt_pretty=True) # returns a generator
 ws_ids = []
